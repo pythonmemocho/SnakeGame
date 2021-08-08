@@ -42,16 +42,13 @@ class Player:
         self.height = self.image.get_height()
         
         #移動幅の設定
-        self.dx = 10
-        self.dy = 10
-        #速度の設定
-        self.speed = 1
-        self.max_speed = 15
+        self.dx = CHIP_SIZE
+        self.dy = CHIP_SIZE
         #長さの設定
-        self.length = 2
-        self.max_length = 100
+        self.length = 1
+        self.max_length = 50
         #動いたルートを記録用のリスト
-        self.body_list = [(x,y)]
+        self.body_list = [(x, y)]
 
         #移動用の判定
         self.RIGHT = False
@@ -73,20 +70,16 @@ class Player:
     #ゲームオーバー時にテキスト描画するメソッド
     def gameover(self):
         draw_text('Game Over', 100, WIDTH / 2, int(HEIGHT * 0.45), WHITE)
+        draw_text('SPACE_KEY to RESTART', 80, int(WIDTH / 2), int(HEIGHT / 1.5), WHITE)
         self.PLAY = False
 
     #動いたルートをリストに追加していくメソッド
     def log_append(self,x,y):
         if len(self.body_list) < self.length and len(self.body_list) < self.max_length:
-            self.body_list.append((x, y)) 
+            self.body_list.append((x , y))
         else:
-            self.body_list.pop(0)
-    
-    #スピードアップ用メソッド
-    def add_speed(self):
-        if self.speed < self.max_speed:
-            self.speed += 1
-            
+            self.body_list.append((x,y))
+            self.body_list.pop(0) 
 
     #キー操作用のメソッド
     def move(self):
@@ -112,22 +105,22 @@ class Player:
 
             #それぞれがTRUEなら速度を足す
             if self.RIGHT:
-                self.rect.x += (self.dx + self.speed)
+                self.rect.x += self.dx
                 #ルートのリストに動いた位置を追加
                 self.log_append(self.rect.x,self.rect.y)
             if self.LEFT:
-                self.rect.x -= (self.dx + self.speed)
+                self.rect.x -= self.dx
                 self.log_append(self.rect.x,self.rect.y)
             if self.UP:
-                self.rect.y -= (self.dy + self.speed)
+                self.rect.y -= self.dy
                 self.log_append(self.rect.x,self.rect.y)
             if self.DOWN:
-                self.rect.y += (self.dy + self.speed)     
+                self.rect.y += self.dy     
                 self.log_append(self.rect.x,self.rect.y)
-    
+
     #壁に当たったかの判定用メソッド
     def check_wall_collide(self):
-        if self.rect.left > WIDTH or self.rect.right < 0 or self.rect.bottom < 0 or self.rect.top > HEIGHT:
+        if self.rect.right > WIDTH or self.rect.left < 0 or self.rect.top < 0 or self.rect.bottom > HEIGHT:
             self.gameover()      
     
     #描画メソッド
@@ -135,10 +128,18 @@ class Player:
         #リストをfor文で一つづつ描画
         for list in self.body_list:
             pg.draw.rect(SCREEN, GREEN, (list[0],list[1],self.width,self.height))
+        
+    #全ての処理をアップデートメソッドにまとめる    
+    def update(self):
+        self.move()
+        self.draw()     
         #衝突判定のメソッドを実行
         self.check_wall_collide()
         self.check_collision_self()
-             
+
+    def respawn(self,x,y):
+        self.length = 1
+        self.body_list = [(x,y)]
 #food class
 class Food:
     def __init__(self, x, y):
@@ -146,49 +147,51 @@ class Food:
         self.rect = self.image.get_rect()
         self.rect.topleft = (x, y)
     
+    #foodの位置をランダムに決める為のメソッド
+    #初期値はWIDTH,HEIGHT=800,CHIP_SIZE=20
+    def lottery(self):
+        self.rect.x,self.rect.y = random.randint(0,int(WIDTH / CHIP_SIZE) - 1) * CHIP_SIZE, random.randint(0,int(WIDTH / CHIP_SIZE) - 1) * CHIP_SIZE
+        return self.rect.x, self.rect.y
+
     #描画メソッド
     def draw(self):
         pg.draw.rect(SCREEN, YELLOW,(self.rect.x,self.rect.y,CHIP_SIZE,CHIP_SIZE))
-
 
 #ゲームクラス
 class Game:
     def __init__(self):
         #pygameとmixerの初期化
-        pg.init()  
-        pg.mixer.init()
-        #サウンド設定
-        self.get_food_sound = pg.mixer.Sound('get_food_sound.mp3')
-        self.get_food_sound.set_volume(0.5)
+        pg.init()
+        try:  
+            #サウンド設定
+            pg.mixer.init()
+            self.get_food_sound = pg.mixer.Sound('get_food_sound.mp3')
+            self.get_food_sound.set_volume(0.5)
+        except:
+            print('no sound system')
         
         #スコア設定
         self.score = 0
+        
+        #速度設定
+        self.speed = 0
+        self.max_speed = 10
+
         #プレイヤーインスタンス化（初期位置は適当に決定、真ん中辺りに）
-        self.player = Player(CHIP_SIZE * 7,CHIP_SIZE * 7)
+        self.player = Player(CHIP_SIZE * 10,CHIP_SIZE * 10)
         
         #メソッドでfoodの初期位置をランダムで決める
-        self.rottary()
         #foodのインスタンス化
-        self.food = Food(self.x, self.y)
+        self.food = Food(random.randrange(0,WIDTH,CHIP_SIZE),random.randrange(0,HEIGHT,CHIP_SIZE) )
         #バックグラウンドのインスタンス化
         self.bg = Background()
 
-        #画面外に配置されないように数値を調整
-        self.food_pos = int(WIDTH / CHIP_SIZE) -1
         
-    #foodの位置をランダムに決める為のメソッド
-    def rottary(self):
-        self.x,self.y = random.randint(0,15) * CHIP_SIZE, random.randint(0,15) * CHIP_SIZE
-        check_pos = (self.x,self.y)
-        #ポジションがプレイヤーのルートリスト内に入っていたら再選択する
-        if check_pos in self.player.body_list:
-            self.rottary()
-        return self.x, self.y
-    
     #スコア描画用メソッド
     def draw_score(self):
         draw_text(f'SCORE: {self.score}', 80, int(WIDTH / 2), 20, WHITE)
-    
+
+
     #メインループ処理メソッド
     def main(self):
         running = True
@@ -199,29 +202,44 @@ class Game:
                 if event.type == pg.KEYDOWN:
                     if event.key == K_ESCAPE:
                         running = False
+                
+                if self.player.PLAY == False:
+                   
+                    if event.type == pg.KEYDOWN:
+                        if event.key == K_SPACE:
+                            self.score = 0
+                            self.player.rect.x,self.player.rect.y = CHIP_SIZE * 10,CHIP_SIZE * 10
+                            self.player.respawn(CHIP_SIZE * 10,CHIP_SIZE * 10)
+                            self.player.PLAY = True
+                            self.speed = 0
+
             #背景描画
             SCREEN.fill(WHITE)
 
             #バックグラウンドの描画
             self.bg.draw()
-            #foodの描画
+            # #foodの描画
             self.food.draw()
-            #プレイヤーの描画と動き用のメソッド呼び出し     
-            self.player.draw()
-            self.player.move()
+            # #プレイヤーの描画と動き用のメソッド呼び出し     
+            self.player.update()
 
             #スコア描画
             self.draw_score()
-            if self.player.rect.colliderect(self.food.rect):
-                self.get_food_sound.play()
-                self.rottary()
-                self.food.rect.x,self.food.rect.y = self.x, self.y
-                self.player.length += 1
-                self.player.add_speed()
-                self.score += 100
 
+            # #playerとfoodの衝突判定
+            if self.player.rect.colliderect(self.food.rect):
+                self.food.lottery()
+                self.player.length += 1
+                self.score += 100
+                if self.speed < self.max_speed:
+                    self.speed += 1
+                try:
+                    self.get_food_sound.play()
+                except:
+                    pass
+                
             #ゲーム全体の速度設定
-            CLOCK.tick(FPS)
+            CLOCK.tick(FPS + self.speed)
             #全体をアップデート
             pg.display.update()
         pg.quit()

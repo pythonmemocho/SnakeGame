@@ -19,10 +19,10 @@ WHITE  = (255, 255, 255)
 
 #clockとfpsの設定
 CLOCK = pg.time.Clock()
-FPS = 15
+FPS = 10
 
 #1マス辺りのサイズ設定
-CHIP_SIZE = 50
+CHIP_SIZE = 20
 
 #テキスト描画用の関数
 def draw_text(text, size, x, y, color):

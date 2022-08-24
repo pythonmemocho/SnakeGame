@@ -126,8 +126,8 @@ class Player:
     #描画メソッド
     def draw(self):
         #リストをfor文で一つづつ描画
-        for list in self.body_list:
-            pg.draw.rect(SCREEN, GREEN, (list[0],list[1],self.width,self.height))
+        for body in self.body_list:
+            pg.draw.rect(SCREEN, GREEN, (body[0],body[1],self.width,self.height))
         
     #全ての処理をアップデートメソッドにまとめる    
     def update(self):
@@ -246,10 +246,7 @@ class Game:
 
 #ゲームクラスのインスタンス化
 game = Game()
-#ゲームクラスのメソッドを実行（これでゲームスタートする）
-game.main()
 
-
-
-
-
+if __name__ == '__main__':
+    #ゲームクラスのメソッドを実行（これでゲームスタートする）
+    game.main()
